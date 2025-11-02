@@ -270,6 +270,12 @@ class Selection_v2(Module):
         jets = Collection(event,"Jet")
         MET = Object(event, "PuppiMET")
         PV = Object(event,"PV")
+        HLT_muon = Object(event,"HLT_IsoMu24")
+        HLT_ele = Object(event,"HLT_Ele32_eta2p1_WPTight_Gsf")
+
+        if not HLT_muon and not HLT_ele:
+            return False 
+
 
         top_nu_momentum_utils = TopUtilities()
 
