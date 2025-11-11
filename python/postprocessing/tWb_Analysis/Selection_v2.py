@@ -20,11 +20,22 @@ class Selection_v2(Module):
     def __init__(self):
         self.writeHistFile = True
 
-        fname = "/cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-24CDEReprocessingFGHIPrompt-Summer24-NanoAODv15/2025-07-17/jetvetomaps.json.gz"
+        fname = "/cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-24CDEReprocessingFGHIPrompt-Summer24-NanoAODv15/latest/jetvetomaps.json.gz"
         with gzip.open(fname, "rt") as f:
             data = f.read()
             evaluator = _core.CorrectionSet.from_string(data)
         self.jetveto_map = evaluator["Summer24Prompt24_RunBCDEFGHI_V1"]
+
+        
+        fname = "/cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-24CDEReprocessingFGHIPrompt-Summer24-NanoAODv15/latest/jetid.json.gz"
+        with gzip.open(fname, "rt") as f:
+            data = f.read()
+            evaluator_jetid = _core.CorrectionSet.from_string(data)
+        self.jetid = evaluator_jetid["AK4PUPPI_TightLeptonVeto"]
+
+
+
+
 
     #Tight Lepton 
     def is_tight_muon(self,mu):
@@ -273,6 +284,7 @@ class Selection_v2(Module):
         HLT_muon = Object(event,"HLT_IsoMu24")
         HLT_ele = Object(event,"HLT_Ele32_eta2p1_WPTight_Gsf")
 
+        #HLT trigger applied on all the event
         if not HLT_muon and not HLT_ele:
             return False 
 
@@ -419,19 +431,35 @@ class Selection_v2(Module):
         goodJets_veto = []
         
         for jet in jets:
+            #Apply the jetvetomap
             veto_val = self.jetveto_map.evaluate("jetvetomap", jet.eta, jet.phi)
-            if veto_val == 0:  # 0 = ok, !=0 = vetoed
+        
+            
+            jetid_result = self.jetid.evaluate(
+                    jet.eta,
+                    jet.chHEF,
+                    jet.neHEF,
+                    jet.chEmEF,
+                    jet.neEmEF,
+                    jet.muEF,
+                    jet.chMultiplicity,
+                    jet.neMultiplicity,
+                    jet.chMultiplicity + jet.neMultiplicity,
+            )
+        
+
+
+            if veto_val == 0 and jetid_result == 1:     # 0 = ok, !=0 = vetoed, 1 == Ok, !=1 Fake jet. 
                 goodJets_veto.append(jet)
 
 
-
-
+        #Number of goodjets and bjets in the event 
         goodJets = list(filter(self.is_good_Jet,goodJets_veto))
         bJets = list(filter(self.is_btag,goodJets))
 
  
  
-        #Number of the different Collection 
+        #Number of the Jets in the event after the selection  
         nJets  = len(goodJets)
         nBjets = len(bJets)
         
@@ -625,7 +653,7 @@ class Selection_v2(Module):
                     cospol_star = W_dir_top.Dot(lep_dir_top)
 
 
-                    if (costheta_star <= 1 and costheta_star >= -1) :
+                    if (costheta_star < 1 and costheta_star > -1) :
                         Helicity_angle_btag_3j1b_Muon.append(costheta_star)
                         
                     if (cospol_star < 1 and cospol_star > -1):
@@ -669,9 +697,9 @@ class Selection_v2(Module):
                 costheta_star = W_dir_top.Dot(lep_dir_W)
                 cospol_star = W_dir_top.Dot(lep_dir_top)
 
-                if (costheta_star <= 1 and costheta_star >= -1): 
+                if (costheta_star < 1 and costheta_star > -1): 
                     Helicity_angle_Extra_3j1b_Muon.append(costheta_star)
-                if (cospol_star >= -1 and cospol_star <= 1):    
+                if (cospol_star > -1 and cospol_star < 1):    
                     Polarization_angle_Extra_3j1b_Muon.append(cospol_star)
 
 
@@ -967,9 +995,9 @@ class Selection_v2(Module):
                     cospol_star = W_dir_top.Dot(lep_dir_top)
 
 
-                    if costheta_star <= 1 and costheta_star >= -1:
+                    if costheta_star < 1 and costheta_star > -1:
                         Helicity_angle_btag_3j1b_Electron.append(costheta_star)
-                    if cospol_star <= 1 and cospol_star >= -1:
+                    if cospol_star < 1 and cospol_star > -1:
                         Polarization_angle_btag_3j1b_Electron.append(cospol_star)
                 
                 ##
